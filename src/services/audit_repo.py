@@ -69,6 +69,27 @@ class AuditRepository:
             await conn.commit()
             return cursor.rowcount > 0
 
+    async def list_user_ids(self, role: str | None = None) -> list[int]:
+        async with aiosqlite.connect(self._db_path) as conn:
+            if role:
+                cursor = await conn.execute(
+                    "SELECT user_id FROM users WHERE role = ? ORDER BY user_id ASC",
+                    (role,),
+                )
+            else:
+                cursor = await conn.execute("SELECT user_id FROM users ORDER BY user_id ASC")
+            rows = await cursor.fetchall()
+            return [row[0] for row in rows]
+
+    async def get_user_role(self, user_id: int) -> str | None:
+        async with aiosqlite.connect(self._db_path) as conn:
+            cursor = await conn.execute(
+                "SELECT role FROM users WHERE user_id = ?",
+                (user_id,),
+            )
+            row = await cursor.fetchone()
+            return row[0] if row else None
+
     async def is_user(self, user_id: int) -> bool:
         async with aiosqlite.connect(self._db_path) as conn:
             cursor = await conn.execute("SELECT 1 FROM users WHERE user_id = ?", (user_id,))

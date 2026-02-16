@@ -155,7 +155,15 @@ DATABASE_EXCLUDED_COLUMNS=password_hash,secret_key,api_token
 - `/help` — List all commands with descriptions
 - `/inspire` — Get sample questions based on your schema
 - `/adduser <user_id>` — Add user (admin only)
-- `/remuser <user_id>` — Remove user (admin only)
+- `/remuser <user_id|number>` — Remove user (admin only)
+- `/listuser` — List users (admin only)
+- `/addadmin <user_id>` — Add admin (admin only)
+- `/remadmin <user_id|number>` — Remove admin (admin only)
+- `/listadmin` — List admins (admin only)
+
+Notes:
+- List commands show numbered results so admins can use `/remuser 1` or `/remadmin 1`.
+- IDs added via env vars are marked `(env)` and cannot be removed by commands.
 
 ### Example Queries
 

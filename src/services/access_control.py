@@ -9,6 +9,12 @@ class AccessDecision:
     reason: str | None = None
 
 
+@dataclass(frozen=True)
+class RemovalResult:
+    removed: bool
+    reason: str | None = None
+
+
 class AccessControl:
     def __init__(self, repo: AuditRepository, admin_ids: list[int], user_ids: list[int]):
         self._repo = repo
@@ -37,5 +43,39 @@ class AccessControl:
     async def add_user(self, user_id: int, added_by: int) -> None:
         await self._repo.upsert_user(user_id, "user", added_by)
 
+    async def add_admin(self, user_id: int, added_by: int) -> None:
+        await self._repo.upsert_user(user_id, "admin", added_by)
+
     async def remove_user(self, user_id: int) -> bool:
         return await self._repo.remove_user(user_id)
+
+    async def list_users(self) -> list[int]:
+        return await self._repo.list_user_ids(role="user")
+
+    async def list_admins(self) -> list[int]:
+        return await self._repo.list_user_ids(role="admin")
+
+    def _is_env_protected(self, user_id: int) -> bool:
+        return user_id in self._admin_ids or user_id in self._user_ids
+
+    async def remove_user_checked(self, user_id: int) -> RemovalResult:
+        if self._is_env_protected(user_id):
+            return RemovalResult(removed=False, reason="env_protected")
+        role = await self._repo.get_user_role(user_id)
+        if role is None:
+            return RemovalResult(removed=False, reason="not_found")
+        if role != "user":
+            return RemovalResult(removed=False, reason="not_user")
+        removed = await self._repo.remove_user(user_id)
+        return RemovalResult(removed=removed, reason=None if removed else "not_found")
+
+    async def remove_admin_checked(self, user_id: int) -> RemovalResult:
+        if self._is_env_protected(user_id):
+            return RemovalResult(removed=False, reason="env_protected")
+        role = await self._repo.get_user_role(user_id)
+        if role is None:
+            return RemovalResult(removed=False, reason="not_found")
+        if role != "admin":
+            return RemovalResult(removed=False, reason="not_admin")
+        removed = await self._repo.remove_user(user_id)
+        return RemovalResult(removed=removed, reason=None if removed else "not_found")

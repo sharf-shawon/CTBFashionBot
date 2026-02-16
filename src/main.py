@@ -51,7 +51,11 @@ class AppServices:
 
 def build_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
-        [["/start", "/help", "/inspire"], ["/adduser", "/remuser"]],
+        [
+            ["/start", "/help", "/inspire"],
+            ["/adduser", "/remuser", "/listuser"],
+            ["/addadmin", "/remadmin", "/listadmin"],
+        ],
         resize_keyboard=True,
         input_field_placeholder="Ask a question",
     )
@@ -69,6 +73,33 @@ def parse_user_id(argument: str | None) -> int | None:
     """Parse and sanitize user ID from command argument."""
     if not argument:
         return None
+    return sanitize_user_id(argument)
+
+
+def format_numbered_list(
+    user_ids: list[int],
+    label: str,
+    protected_ids: set[int] | None = None,
+) -> str:
+    if not user_ids:
+        return f"No {label} found."
+    protected_ids = protected_ids or set()
+    lines = [
+        f"{idx + 1}. {user_id}{' (env)' if user_id in protected_ids else ''}"
+        for idx, user_id in enumerate(user_ids)
+    ]
+    note = "\n\n(env) cannot be removed." if protected_ids else ""
+    return f"{label.title()}:\n" + "\n".join(lines) + note
+
+
+def resolve_user_reference(argument: str | None, user_ids: list[int]) -> int | None:
+    if not argument:
+        return None
+    argument = argument.strip()
+    if argument.isdigit():
+        index = int(argument)
+        if 1 <= index <= len(user_ids):
+            return user_ids[index - 1]
     return sanitize_user_id(argument)
 
 
@@ -100,7 +131,11 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/help - Show this help message\n"
         "/inspire - Get a sample question based on your data\n"
         "/adduser <id> - Add a user (admin only)\n"
-        "/remuser <id> - Remove a user (admin only)\n\n"
+        "/remuser <id|number> - Remove a user (admin only)\n"
+        "/listuser - List users (admin only)\n"
+        "/addadmin <id> - Add an admin (admin only)\n"
+        "/remadmin <id|number> - Remove an admin (admin only)\n"
+        "/listadmin - List admins (admin only)\n\n"
         "💬 Just ask any question about your data!",
         parse_mode="Markdown",
         reply_markup=build_keyboard(),
@@ -123,7 +158,7 @@ async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(f"User {target_id} added.")
 
 
-async def remove_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def add_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not user or not update.message:
         return
@@ -133,13 +168,92 @@ async def remove_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
     target_id = parse_user_id(context.args[0] if context.args else None)
     if target_id is None:
-        await update.message.reply_text("Usage: /remuser <user_id>")
+        await update.message.reply_text("Usage: /addadmin <user_id>")
         return
-    removed = await services.access_control.remove_user(target_id)
-    if removed:
+    await services.access_control.add_admin(target_id, user.id)
+    await update.message.reply_text(f"Admin {target_id} added.")
+
+
+async def remove_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    if not user or not update.message:
+        return
+    services: AppServices = context.application.bot_data["services"]
+    if not await services.access_control.is_admin(user.id):
+        await update.message.reply_text(blocked_message(user.id))
+        return
+    user_ids = await services.access_control.list_users()
+    target_id = resolve_user_reference(context.args[0] if context.args else None, user_ids)
+    if target_id is None:
+        await update.message.reply_text("Usage: /remuser <user_id|number>")
+        return
+    result = await services.access_control.remove_user_checked(target_id)
+    if result.removed:
         await update.message.reply_text(f"User {target_id} removed.")
-    else:
-        await update.message.reply_text(f"User {target_id} was not found.")
+        return
+    if result.reason == "env_protected":
+        await update.message.reply_text("This user cannot be removed.")
+        return
+    if result.reason == "not_user":
+        await update.message.reply_text("That ID belongs to an admin. Use /remadmin instead.")
+        return
+    await update.message.reply_text(f"User {target_id} was not found.")
+
+
+async def remove_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    if not user or not update.message:
+        return
+    services: AppServices = context.application.bot_data["services"]
+    if not await services.access_control.is_admin(user.id):
+        await update.message.reply_text(blocked_message(user.id))
+        return
+    admin_ids = await services.access_control.list_admins()
+    target_id = resolve_user_reference(context.args[0] if context.args else None, admin_ids)
+    if target_id is None:
+        await update.message.reply_text("Usage: /remadmin <user_id|number>")
+        return
+    result = await services.access_control.remove_admin_checked(target_id)
+    if result.removed:
+        await update.message.reply_text(f"Admin {target_id} removed.")
+        return
+    if result.reason == "env_protected":
+        await update.message.reply_text("This admin cannot be removed.")
+        return
+    if result.reason == "not_admin":
+        await update.message.reply_text("That ID is not an admin.")
+        return
+    await update.message.reply_text(f"Admin {target_id} was not found.")
+
+
+async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    if not user or not update.message:
+        return
+    services: AppServices = context.application.bot_data["services"]
+    if not await services.access_control.is_admin(user.id):
+        await update.message.reply_text(blocked_message(user.id))
+        return
+    user_ids = await services.access_control.list_users()
+    protected_ids = set(USER_IDS)
+    await update.message.reply_text(
+        format_numbered_list(user_ids, "users", protected_ids=protected_ids)
+    )
+
+
+async def list_admins(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    if not user or not update.message:
+        return
+    services: AppServices = context.application.bot_data["services"]
+    if not await services.access_control.is_admin(user.id):
+        await update.message.reply_text(blocked_message(user.id))
+        return
+    admin_ids = await services.access_control.list_admins()
+    protected_ids = set(ADMIN_IDS)
+    await update.message.reply_text(
+        format_numbered_list(admin_ids, "admins", protected_ids=protected_ids)
+    )
 
 
 async def inspire(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -248,6 +362,10 @@ def main() -> None:
     application.add_handler(CommandHandler("inspire", inspire))
     application.add_handler(CommandHandler("adduser", add_user))
     application.add_handler(CommandHandler("remuser", remove_user))
+    application.add_handler(CommandHandler("listuser", list_users))
+    application.add_handler(CommandHandler("addadmin", add_admin))
+    application.add_handler(CommandHandler("remadmin", remove_admin))
+    application.add_handler(CommandHandler("listadmin", list_admins))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
