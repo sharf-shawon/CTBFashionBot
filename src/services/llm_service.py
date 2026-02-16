@@ -114,10 +114,11 @@ class LlmService:
         user_prompt = f"Question: {question}"
         response = await self._client.ainvoke([message, ("human", user_prompt)])
         raw_response = response.content or ""
-        LOGGER.debug(f"LLM raw response: {raw_response}")
+        LOGGER.info(f"LLM generated SQL response: {raw_response[:150]}...")
         result = self._parse_sql_response(raw_response)
-        LOGGER.debug(
-            f"Parsed result: status={result.status}, sql={result.sql}, notes={result.notes}"
+        LOGGER.info(
+            f"Parsed SQL result: status={result.status}, "
+            f"has_sql={bool(result.sql)}, notes={result.notes}"
         )
         return result
 
@@ -172,15 +173,17 @@ class LlmService:
         try:
             payload = json.loads(cleaned)
         except json.JSONDecodeError as exc:
-            LOGGER.warning(f"JSON parse error: {exc}, raw: {cleaned[:200]}")
+            LOGGER.error(f"LLM JSON parse error: {exc}, raw text: {raw_text[:200]}")
             return SqlGeneration(status="out_of_scope", sql=None, notes="invalid_json")
         status = (payload.get("status") or "").lower()
         sql = payload.get("sql")
         notes = payload.get("notes")
         if status not in {"ok", "out_of_scope"}:
+            LOGGER.warning(f"LLM returned invalid status: {status}, reverting to out_of_scope")
             status = "out_of_scope"
             sql = None
         if status == "ok" and not isinstance(sql, str):
+            LOGGER.warning(f"LLM status ok but no valid SQL: sql={sql}, notes={notes}")
             status = "out_of_scope"
             sql = None
         return SqlGeneration(status=status, sql=sql, notes=notes)

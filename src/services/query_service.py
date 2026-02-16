@@ -133,11 +133,13 @@ class QueryService:
                 continue
 
             if generation.status != "ok" or not generation.sql:
-                LOGGER.debug(
-                    f"LLM returned non-ok status: {generation.status}, notes: {generation.notes}"
+                LOGGER.info(
+                    f"LLM returned non-ok status for user {user_id}: "
+                    f"status={generation.status}, notes={generation.notes}, "
+                    f"question={question[:80]}"
                 )
                 if generation.notes == "too_many_items":
-                    LOGGER.debug(f"User requested too many items: {question}")
+                    LOGGER.info(f"User {user_id} requested too many items: {question}")
                     reply = (
                         "I can only list up to 100 items at a time. "
                         "Please be more precise with your query "
@@ -155,7 +157,7 @@ class QueryService:
                     )
                     return QueryResult(answer=reply, sql=None, success=False)
                 if generation.notes == "off_topic":
-                    LOGGER.debug(f"Off-topic question detected: {question}")
+                    LOGGER.info(f"Off-topic question from user {user_id}: {question[:80]}")
                     try:
                         reply = await self._llm.generate_off_topic_reply(question)
                     except Exception as exc:
@@ -172,6 +174,10 @@ class QueryService:
                         )
                     )
                     return QueryResult(answer=reply, sql=None, success=True)
+                LOGGER.info(
+                    f"LLM out_of_scope for user {user_id}: "
+                    f"status={generation.status}, notes={generation.notes}"
+                )
                 await self._audit_repo.record_audit(
                     AuditRecord(
                         user_id=user_id,
@@ -186,13 +192,20 @@ class QueryService:
 
             validation = guard.validate(generation.sql)
             if not validation.ok:
-                LOGGER.debug(f"SQL guard rejected: {validation.reason}")
+                LOGGER.warning(
+                    f"SQL guard rejected for user {user_id}: "
+                    f"reason={validation.reason}, sql={generation.sql[:100]}"
+                )
                 last_error = validation.reason or "invalid_sql"
                 continue
 
             try:
                 rows = await asyncio.to_thread(self._execute_sql, generation.sql)
             except Exception as exc:  # pragma: no cover - handled via retries
+                LOGGER.warning(
+                    f"SQL execution failed for user {user_id}: {exc}, "
+                    f"sql={generation.sql[:100]}, attempt {attempt}/{LLM_MAX_RETRIES}"
+                )
                 last_error = f"execution_error: {exc}"
                 if attempt >= LLM_MAX_RETRIES:
                     await self._audit_repo.record_audit(
@@ -210,6 +223,7 @@ class QueryService:
 
             rows = self._redact_rows(rows)
             if not rows:
+                LOGGER.info(f"Query returned no results for user {user_id}: {question[:80]}")
                 await self._audit_repo.record_audit(
                     AuditRecord(
                         user_id=user_id,

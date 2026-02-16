@@ -6,10 +6,10 @@ TG_BOT_TOKEN: str = env.str("TG_BOT_TOKEN", default="")
 TG_BOT_NAME: str = env.str("TG_BOT_NAME", default="CTBFashion")
 TG_BOT_USERNAME: str = env.str("TG_BOT_USERNAME", default="CTBFashionBot")
 TG_BOT_LINK: str = env.str("TG_BOT_LINK", default="https://t.me/CTBFashionBot")
-TG_BOT_OWNER_ID = env.int("TG_BOT_OWNER_ID", default=0)
+TG_BOT_OWNER_ID = env.int("TG_BOT_OWNER_ID", default=12345678)
 
-ADMIN_IDS: list[int] = env.list("ADMIN_IDS", default=[], subcast=int)
-USER_IDS: list[int] = env.list("USER_IDS", default=[], subcast=int)
+ADMIN_IDS: list[int] = env.list("ADMIN_IDS", default=[TG_BOT_OWNER_ID], subcast=int)
+USER_IDS: list[int] = env.list("USER_IDS", default=[TG_BOT_OWNER_ID], subcast=int)
 
 DATABASE_URL: str = env.str("DATABASE_URL", default=f"sqlite:///{DATA_DIR / 'database.db'}")
 DATABASE_ALLOWED_TABLES: list[str] = env.list("DATABASE_ALLOWED_TABLES", default=[], subcast=str)
@@ -17,7 +17,15 @@ DATABASE_RESTRICTED_TABLES: list[str] = env.list(
     "DATABASE_RESTRICTED_TABLES", default=[""], subcast=str
 )
 DATABASE_EXCLUDED_COLUMNS: list[str] = env.list(
-    "DATABASE_EXCLUDED_COLUMNS", default=[""], subcast=str
+    "DATABASE_EXCLUDED_COLUMNS",
+    default=[
+        "django_sessionss",
+        "auth_user_user_permissionsess",
+        "auth_user_groupss",
+        "email_signals_signalss",
+        "django_migrationss",
+    ],
+    subcast=str,
 )
 
 AUDIT_DB_PATH = DATA_DIR / "audit.db"

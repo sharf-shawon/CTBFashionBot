@@ -10,6 +10,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OPENROUTER_MODEL: ${{ secrets.OPENROUTER_MODEL }}
+      CURRENCY_SYMBOL: "Tk"
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,8 +27,8 @@ jobs:
       - name: Set up Python
         run: uv python install 3.13
 
-      - name: Install dependencies
-        run: uv sync
+      - name: Install dependencies (with dev)
+        run: uv sync --all-extras
 
       - name: Run ruff format check
         run: uv run ruff format --check

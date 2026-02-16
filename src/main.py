@@ -3,7 +3,13 @@ from dataclasses import dataclass
 
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.constants import ChatAction
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
 
 from config.base import (
     ADMIN_IDS,
@@ -19,11 +25,18 @@ from services.access_control import AccessControl
 from services.audit_repo import AuditRepository
 from services.inspire_service import InspireService
 from services.query_service import QueryService
+from utils.format import markdown_to_html
 from utils.profanity import contains_profanity, get_random_profanity_warning
 from utils.responses import (
     get_random_access_denied,
     get_random_error,
     get_random_waiting,
+)
+from utils.sanitize import (
+    is_suspicious_sql_pattern,
+    sanitize_for_markdown,
+    sanitize_message,
+    sanitize_user_id,
 )
 from utils.smalltalk import handle_small_talk, is_small_talk
 
@@ -53,12 +66,10 @@ def blocked_message(user_id: int) -> str:
 
 
 def parse_user_id(argument: str | None) -> int | None:
+    """Parse and sanitize user ID from command argument."""
     if not argument:
         return None
-    argument = argument.strip()
-    if not argument.isdigit():
-        return None
-    return int(argument)
+    return sanitize_user_id(argument)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -142,8 +153,10 @@ async def inspire(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
     question = services.inspire_service.generate_question()
     if question:
+        # Sanitize question for safe Markdown display
+        safe_question = sanitize_for_markdown(question)
         await update.message.reply_text(
-            f"💡 *Try this:*\n\n{question}\n\n"
+            f"💡 *Try this:*\n\n{safe_question}\n\n"
             f"_Feel free to ask similar questions or modify this one!_",
             parse_mode="Markdown",
         )
@@ -162,7 +175,27 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(blocked_message(user.id))
         return
 
-    question = update.message.text or ""
+    raw_question = update.message.text or ""
+
+    # Sanitize user input (defense in depth)
+    question = sanitize_message(raw_question)
+
+    if not question:
+        LOGGER.warning(f"Empty question from user {user.id} after sanitization")
+        await update.message.reply_text("Please send a valid question.")
+        return
+
+    # Log original vs sanitized for debugging
+    if raw_question != question:
+        LOGGER.debug(
+            f"User {user.id} input sanitized: "
+            f"original={raw_question[:100]}, sanitized={question[:100]}"
+        )
+
+    # Check for suspicious SQL patterns (defense in depth)
+    if is_suspicious_sql_pattern(question):
+        LOGGER.warning(f"Suspicious SQL pattern from user {user.id}: {question[:100]}")
+        return
 
     # Check for profanity if enabled
     if PROFANITY_FILTER_ENABLED and contains_profanity(question):
@@ -182,7 +215,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     try:
         result = await services.query_service.answer_question(user.id, question)
-        await placeholder.edit_text(result.answer)
+        # Convert Markdown to HTML for Telegram rendering
+        html_answer = markdown_to_html(result.answer)
+        await placeholder.edit_text(html_answer, parse_mode="HTML")
     except Exception as exc:  # pragma: no cover - safe fallback
         LOGGER.exception("Message handling error: %s", exc)
         await placeholder.edit_text(get_random_error())
