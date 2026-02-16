@@ -85,10 +85,10 @@ def format_numbered_list(
         return f"No {label} found."
     protected_ids = protected_ids or set()
     lines = [
-        f"{idx + 1}. {user_id}{' (env)' if user_id in protected_ids else ''}"
+        f"{idx + 1}. {user_id}{' (P)' if user_id in protected_ids else ''}"
         for idx, user_id in enumerate(user_ids)
     ]
-    note = "\n\n(env) cannot be removed." if protected_ids else ""
+    note = "\n\n(P) = Permanent, cannot be removed." if protected_ids else ""
     return f"{label.title()}:\n" + "\n".join(lines) + note
 
 
@@ -192,7 +192,7 @@ async def remove_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await update.message.reply_text(f"User {target_id} removed.")
         return
     if result.reason == "env_protected":
-        await update.message.reply_text("This user cannot be removed.")
+        await update.message.reply_text("(P) = Permanent, cannot be removed.")
         return
     if result.reason == "not_user":
         await update.message.reply_text("That ID belongs to an admin. Use /remadmin instead.")
@@ -218,7 +218,7 @@ async def remove_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await update.message.reply_text(f"Admin {target_id} removed.")
         return
     if result.reason == "env_protected":
-        await update.message.reply_text("This admin cannot be removed.")
+        await update.message.reply_text("(P) = Permanent, cannot be removed.")
         return
     if result.reason == "not_admin":
         await update.message.reply_text("That ID is not an admin.")

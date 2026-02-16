@@ -163,7 +163,7 @@ DATABASE_EXCLUDED_COLUMNS=password_hash,secret_key,api_token
 
 Notes:
 - List commands show numbered results so admins can use `/remuser 1` or `/remadmin 1`.
-- IDs added via env vars are marked `(env)` and cannot be removed by commands.
+- IDs marked `(P)` are permanent (added with env variable) and cannot be removed by commands.
 
 ### Example Queries
 
