@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from dataclasses import dataclass
 
-from telegram import ReplyKeyboardMarkup, Update
+from telegram import BotCommand, ReplyKeyboardMarkup, Update
 from telegram.constants import ChatAction
 from telegram.ext import (
     Application,
@@ -350,6 +350,22 @@ async def initialize_services(app: Application) -> None:
         query_service=query_service,
         inspire_service=inspire_service,
     )
+
+    # Register commands with Telegram to update client UI
+    await app.bot.set_my_commands(
+        [
+            BotCommand("start", "Start the bot"),
+            BotCommand("help", "Show help and available commands"),
+            BotCommand("inspire", "Get sample questions from database schema"),
+            BotCommand("adduser", "Add user (admin only)"),
+            BotCommand("remuser", "Remove user (admin only)"),
+            BotCommand("listuser", "List all users (admin only)"),
+            BotCommand("addadmin", "Add admin (admin only)"),
+            BotCommand("remadmin", "Remove admin (admin only)"),
+            BotCommand("listadmin", "List all admins (admin only)"),
+        ]
+    )
+    LOGGER.info("Bot commands registered with Telegram")
 
 
 def main() -> None:
