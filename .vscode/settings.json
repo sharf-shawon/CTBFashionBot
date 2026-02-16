@@ -1,0 +1,19 @@
+{
+  "editor.formatOnSave": true,
+  "editor.formatOnSaveMode": "file",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.ruff": true
+  },
+  "editor.codeActionsOnSaveMode": "always",
+  "files.autoSave": "onFocusChange",
+  "python.analysis.typeCheckingMode": "basic",
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#229ED9",
+    "titleBar.activeForeground": "#ffffff",
+    "titleBar.inactiveBackground": "#7FC8EA",
+    "titleBar.inactiveForeground": "#1f1f1f"
+  }
+}

@@ -1,0 +1,44 @@
+[project]
+name = "ctbfashionbot"
+version = "0.1.0"
+description = "Production-ready Telegram bot that translates natural language questions into safe SQL queries using LLM"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "environ>=1.0",
+    "environs>=14.5.0",
+    "aiosqlite>=0.20.0",
+    "langchain>=0.2.14",
+    "langchain-openai>=0.1.22",
+    "psycopg[binary]>=3.2.1",
+    "python-telegram-bot>=22.6",
+    "sqlalchemy>=2.0.34",
+    "sqlglot>=25.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.6.4",
+    "pre-commit>=4.0.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B008"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

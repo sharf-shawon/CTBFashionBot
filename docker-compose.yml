@@ -1,0 +1,26 @@
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    environment:
+      TG_BOT_TOKEN: ${TG_BOT_TOKEN:?}
+      TG_BOT_NAME: ${TG_BOT_NAME:-CTBFashion}
+      TG_BOT_USERNAME: ${TG_BOT_USERNAME:-CTBFashionBot}
+      TG_BOT_LINK: ${TG_BOT_LINK:}
+      TG_BOT_OWNER_ID: ${TG_BOT_OWNER_ID:}
+      ADMIN_IDS: ${ADMIN_IDS:?}
+      USER_IDS: ${USER_IDS:?}
+      DATABASE_URL: ${DATABASE_URL:?}
+      DATABASE_ALLOWED_TABLES: ${DATABASE_ALLOWED_TABLES:}
+      DATABASE_RESTRICTED_TABLES: ${DATABASE_RESTRICTED_TABLES:}
+      DATABASE_EXCLUDED_COLUMNS: ${DATABASE_EXCLUDED_COLUMNS:}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:?}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:?}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DEBUG: ${DEBUG:-false}
+      CURRENCY_SYMBOL: ${CURRENCY_SYMBOL:-Tk}
+      SMALLTALK_ENABLED: ${SMALLTALK_ENABLED:-true}
+      PROFANITY_FILTER_ENABLED: ${PROFANITY_FILTER_ENABLED:-true}
+    volumes:
+      - ./storage/data:/app/storage/data
+      - ./storage/logs:/app/storage/logs
