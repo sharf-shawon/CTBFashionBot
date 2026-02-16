@@ -23,3 +23,6 @@ services:
       PROFANITY_FILTER_ENABLED: ${PROFANITY_FILTER_ENABLED:-true}
     volumes:
       - bot-data:/app/storage
+
+volumes:
+  bot-data:

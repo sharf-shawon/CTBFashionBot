@@ -15,7 +15,10 @@ COPY src /app/src
 
 RUN uv pip install --system --no-cache -e .
 
-RUN adduser -D appuser
+RUN adduser -D appuser && \
+    mkdir -p /app/storage/data /app/storage/logs && \
+    chown -R appuser:appuser /app/storage
+
 USER appuser
 
 CMD ["python", "src/main.py"]
