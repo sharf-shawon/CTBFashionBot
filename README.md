@@ -17,7 +17,7 @@ A production-ready Telegram bot that translates natural language questions into 
 ## Requirements
 
 - Python 3.13+
-- PostgreSQL database (or SQLite for testing)
+- Database: PostgreSQL, MySQL 5.7+, or SQLite
 - Telegram Bot Token ([create one](https://t.me/BotFather))
 - OpenRouter API Key ([get one](https://openrouter.ai/))
 
@@ -120,7 +120,7 @@ pre-commit run --all-files
 | `TG_BOT_TOKEN` | ✅ | — | Telegram bot token from @BotFather |
 | `OPENROUTER_API_KEY` | ✅ | — | OpenRouter API key |
 | `OPENROUTER_MODEL` | ✅ | — | LLM model (e.g., `openrouter/aurora-alpha`) |
-| `DATABASE_URL` | ❌ | SQLite | PostgreSQL connection string |
+| `DATABASE_URL` | ❌ | SQLite | Database URL (`postgres://`, `mysql://`, or `sqlite://`) |
 | `ADMIN_IDS` | ❌ | `[]` | Comma-separated Telegram user IDs |
 | `USER_IDS` | ❌ | `[]` | Comma-separated Telegram user IDs |
 | `DATABASE_ALLOWED_TABLES` | ❌ | All | Restrict to specific tables |
@@ -146,6 +146,29 @@ DATABASE_RESTRICTED_TABLES=admin_logs,internal_notes
 # Hide sensitive columns (excluded from SELECT *)
 DATABASE_EXCLUDED_COLUMNS=password_hash,secret_key,api_token
 ```
+
+### Database Configuration
+
+#### PostgreSQL (Default)
+```bash
+DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+# or: postgres://user:password@localhost:5432/dbname (auto-converted)
+```
+
+#### MySQL 5.7+
+```bash
+DATABASE_URL=mysql://user:password@localhost/dbname
+# Driver: PyMySQL (auto-installed)
+```
+
+#### SQLite (Local Development)
+```bash
+DATABASE_URL=sqlite:///storage/data/database.db
+```
+
+**Note**: Mixed-case table names (e.g., `Employee_task`, `Trade_invoice`) are handled automatically:
+- PostgreSQL: Uses double quotes `"Employee_task"`
+- MySQL: Uses backticks `` `Employee_task` ``
 
 ## Usage
 
@@ -220,9 +243,10 @@ docker compose restart bot
 - Check logs: `docker compose logs bot`
 
 **Database connection fails:**
-- Verify `DATABASE_URL` format: `postgres://user:pass@host:port/db`
+- PostgreSQL: Verify `postgresql://user:pass@host:port/db` format
+- MySQL: Verify `mysql://user:pass@host/dbname` format (no port = default 3306)
 - Ensure database is accessible from bot container
-- Check network connectivity
+- Check network connectivity and firewall rules
 
 **LLM errors (502):**
 - OpenRouter API may be down (check status page)

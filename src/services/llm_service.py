@@ -40,28 +40,33 @@ class LlmService:
         constraints_text: str,
         error_context: str | None = None,
     ) -> SqlGeneration:
+        # Select quote character based on database dialect
+        quote_open = "`" if dialect == "mysql" else '"'
+        quote_close = "`" if dialect == "mysql" else '"'
+        quote_name = "backticks" if dialect == "mysql" else "double quotes"
+
         system_parts = [
             "# SQL Generation Task",
             "Generate safe, read-only SQL queries for analytics.",
             "",
-            "## ⚠️ CRITICAL RULE #1: EXACT TABLE NAMES WITH QUOTES",
-            "PostgreSQL requires double quotes for mixed-case table names:",
+            f"## ⚠️ CRITICAL RULE #1: EXACT TABLE NAMES WITH {quote_name.upper()}",
+            f"Your database uses {quote_name} for mixed-case table names:",
             "❌ WRONG: SELECT * FROM Employee_task",
-            '✅ CORRECT: SELECT * FROM "Employee_task"',
+            f"✅ CORRECT: SELECT * FROM {quote_open}Employee_task{quote_close}",
             "",
             "RULES:",
             "1. Copy table names EXACTLY as shown in Available Schema (preserve all capitals)",
-            '2. If table name has ANY uppercase letters, wrap it in double quotes: "Employee_task"',
+            f"2. If table name has ANY uppercase letters, wrap it in {quote_name}: {quote_open}Employee_task{quote_close}",
             "3. If table name is all lowercase (e.g., auth_user), NO quotes needed",
-            "4. Column names: same rule - quotes if mixed case, no quotes if lowercase",
+            f"4. Column names: same rule - {quote_name} if mixed case, no quotes if lowercase",
             "",
             "Examples from your schema:",
-            '- "Business_client" (has uppercase)',
-            '- "Employee_task" (has uppercase)',
-            '- "Trade_invoice" (has uppercase)',
+            f"- {quote_open}Business_client{quote_close} (has uppercase)",
+            f"- {quote_open}Employee_task{quote_close} (has uppercase)",
+            f"- {quote_open}Trade_invoice{quote_close} (has uppercase)",
             "- auth_user (all lowercase, no quotes)",
             "",
-            "If query fails with 'relation does not exist', you forgot the quotes!",
+            f"If query fails with 'not found' or 'does not exist', you forgot the {quote_name}!",
             "",
             "## Output Format",
             (

@@ -208,9 +208,13 @@ class QueryService:
                     f"sql={generation.sql[:100]}, attempt {attempt}/{LLM_MAX_RETRIES}"
                 )
 
-                # Detect table name case sensitivity errors
-                if "relation" in error_msg.lower() and "does not exist" in error_msg.lower():
-                    # Extract table name from error if possible
+                # Detect table name case sensitivity errors - dialect aware
+                if (
+                    schema_info.dialect == "postgresql"
+                    and "relation" in error_msg.lower()
+                    and "does not exist" in error_msg.lower()
+                ):
+                    # PostgreSQL error
                     last_error = (
                         f"Table not found error: {error_msg}\n\n"
                         "⚠️ CRITICAL: PostgreSQL mixed-case table name error!\n"
@@ -219,6 +223,20 @@ class QueryService:
                         '✅ CORRECT: SELECT * FROM "Employee_task"\n'
                         "❌ WRONG: SELECT * FROM Employee_task\n\n"
                         "If table is all lowercase (e.g., auth_user), no quotes needed."
+                    )
+                elif schema_info.dialect == "mysql" and (
+                    ("table" in error_msg.lower() and "doesn't exist" in error_msg.lower())
+                    or "unknown table" in error_msg.lower()
+                ):
+                    # MySQL error
+                    last_error = (
+                        f"Table not found error: {error_msg}\n\n"
+                        "⚠️ CRITICAL: MySQL mixed-case table name error!\n"
+                        "Look at the 'Available Schema' section - if table name has uppercase letters "
+                        "(e.g., Employee_task, Trade_invoice), you MUST use backticks:\n"
+                        "✅ CORRECT: SELECT * FROM `Employee_task`\n"
+                        "❌ WRONG: SELECT * FROM Employee_task\n\n"
+                        "If table is all lowercase (e.g., auth_user), no backticks needed."
                     )
                 else:
                     last_error = f"execution_error: {exc}"
