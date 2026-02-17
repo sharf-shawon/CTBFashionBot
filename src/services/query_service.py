@@ -218,7 +218,7 @@ class QueryService:
                     last_error = (
                         f"Table not found error: {error_msg}\n\n"
                         "⚠️ CRITICAL: PostgreSQL mixed-case table name error!\n"
-                        "Look at the 'Available Schema' section - if table name has uppercase letters "
+                        "Look at the 'Available Schema' - if table name has uppercase letters"
                         "(e.g., Employee_task, Trade_invoice), you MUST use double quotes:\n"
                         '✅ CORRECT: SELECT * FROM "Employee_task"\n'
                         "❌ WRONG: SELECT * FROM Employee_task\n\n"
@@ -232,7 +232,7 @@ class QueryService:
                     last_error = (
                         f"Table not found error: {error_msg}\n\n"
                         "⚠️ CRITICAL: MySQL mixed-case table name error!\n"
-                        "Look at the 'Available Schema' section - if table name has uppercase letters "
+                        "Look at the 'Available Schema' - if table name has uppercase letters "
                         "(e.g., Employee_task, Trade_invoice), you MUST use backticks:\n"
                         "✅ CORRECT: SELECT * FROM `Employee_task`\n"
                         "❌ WRONG: SELECT * FROM Employee_task\n\n"

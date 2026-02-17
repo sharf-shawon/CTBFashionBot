@@ -56,7 +56,8 @@ class LlmService:
             "",
             "RULES:",
             "1. Copy table names EXACTLY as shown in Available Schema (preserve all capitals)",
-            f"2. If table name has ANY uppercase letters, wrap it in {quote_name}: {quote_open}Employee_task{quote_close}",
+            f"2. If table name has ANY uppercase letters, wrap it in \
+                {quote_name}: {quote_open}Employee_task{quote_close}",
             "3. If table name is all lowercase (e.g., auth_user), NO quotes needed",
             f"4. Column names: same rule - {quote_name} if mixed case, no quotes if lowercase",
             "",
