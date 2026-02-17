@@ -44,6 +44,17 @@ class LlmService:
             "# SQL Generation Task",
             "Generate safe, read-only SQL queries for analytics.",
             "",
+            "## ⚠️ CRITICAL RULE #1: EXACT TABLE NAMES",
+            "❌ WRONG: Trade_invoice, Employee_task, trade_Invoice, TRADE_INVOICE",
+            "✅ CORRECT: Copy EXACTLY from schema below (e.g., trade_invoice, employee_task)",
+            "",
+            "PostgreSQL is case-sensitive. DO NOT:",
+            "- Capitalize table names unless schema shows capitals",
+            "- Add quotes unless table name actually contains spaces/special chars",
+            "- Guess or modify names - copy character-by-character from Available Schema section",
+            "",
+            "If query fails with 'relation does not exist', you used wrong capitalization.",
+            "",
             "## Output Format",
             (
                 "Respond with ONLY a JSON object (no markdown, no code fences) "
@@ -75,11 +86,7 @@ class LlmService:
             "## SQL Rules",
             "1. Read-only only: NO INSERT/UPDATE/DELETE/DDL operations",
             "2. Never use SELECT * with excluded columns",
-            (
-                "3. CRITICAL: Use exact table/column names from schema. "
-                "PostgreSQL is case-sensitive - if schema shows lowercase, use lowercase. "
-                "Never capitalize or modify table names."
-            ),
+            ("3. See CRITICAL RULE #1 above - use exact table/column names from schema"),
             "4. ALWAYS add LIMIT clause to prevent huge result sets",
             ("5. If user asks for 'all records' or 'list all', use LIMIT 100 (maximum allowed)"),
             (
@@ -102,16 +109,6 @@ class LlmService:
                 "and exclude null values"
             ),
             "",
-            "## IMPORTANT: Table Name Matching",
-            (
-                "Copy table and column names EXACTLY as shown in the Available Schema section below. "
-                "Do not change capitalization, add prefixes, or modify names in any way."
-            ),
-            (
-                "Example: If schema shows 'trade_invoice', write 'SELECT * FROM trade_invoice', "
-                "NOT 'Trade_invoice' or 'TradeInvoice'"
-            ),
-            "",
             "## Database Info",
             f"Dialect: {dialect}",
             "",
@@ -119,6 +116,7 @@ class LlmService:
             constraints_text,
             "",
             "## Available Schema",
+            "⚠️ COPY TABLE NAMES EXACTLY AS SHOWN BELOW - CHARACTER BY CHARACTER:",
             schema_text or "(No accessible tables)",
         ]
         if error_context:

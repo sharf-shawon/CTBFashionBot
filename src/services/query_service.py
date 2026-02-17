@@ -202,11 +202,26 @@ class QueryService:
             try:
                 rows = await asyncio.to_thread(self._execute_sql, generation.sql)
             except Exception as exc:  # pragma: no cover - handled via retries
+                error_msg = str(exc)
                 LOGGER.warning(
                     f"SQL execution failed for user {user_id}: {exc}, "
                     f"sql={generation.sql[:100]}, attempt {attempt}/{LLM_MAX_RETRIES}"
                 )
-                last_error = f"execution_error: {exc}"
+
+                # Detect table name case sensitivity errors
+                if "relation" in error_msg.lower() and "does not exist" in error_msg.lower():
+                    # Extract table name from error if possible
+                    last_error = (
+                        f"Table not found error: {error_msg}\n\n"
+                        "⚠️ CRITICAL: You are using the WRONG table name capitalization!\n"
+                        "Look at the 'Available Schema' section below and copy the EXACT table name.\n"
+                        "PostgreSQL is case-sensitive - if schema shows 'trade_invoice', "
+                        "use 'trade_invoice' NOT 'Trade_invoice' or 'TRADE_INVOICE'.\n"
+                        "Do NOT add quotes unless the actual table name has special characters."
+                    )
+                else:
+                    last_error = f"execution_error: {exc}"
+
                 if attempt >= LLM_MAX_RETRIES:
                     await self._audit_repo.record_audit(
                         AuditRecord(
