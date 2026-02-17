@@ -55,6 +55,7 @@ def build_keyboard() -> ReplyKeyboardMarkup:
             ["/start", "/help", "/inspire"],
             ["/adduser", "/remuser", "/listuser"],
             ["/addadmin", "/remadmin", "/listadmin"],
+            ["/schema"],
         ],
         resize_keyboard=True,
         input_field_placeholder="Ask a question",
@@ -130,6 +131,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/start - Start the bot\n"
         "/help - Show this help message\n"
         "/inspire - Get a sample question based on your data\n"
+        "/schema - Show available tables (admin only, debug)\n"
         "/adduser <id> - Add a user (admin only)\n"
         "/remuser <id|number> - Remove a user (admin only)\n"
         "/listuser - List users (admin only)\n"
@@ -280,6 +282,36 @@ async def inspire(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
 
 
+async def show_schema(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show available tables and columns (admin only, for debugging)."""
+    user = update.effective_user
+    if not user or not update.message:
+        return
+    services: AppServices = context.application.bot_data["services"]
+    if not await services.access_control.is_admin(user.id):
+        await update.message.reply_text(blocked_message(user.id))
+        return
+    schema_info = services.query_service._schema_service.get_schema_info()
+    if schema_info.connection_error:
+        await update.message.reply_text("⚠️ Database connection error. Cannot retrieve schema.")
+        return
+    if not schema_info.tables:
+        await update.message.reply_text("No accessible tables found.")
+        return
+    # Format schema for display
+    lines = ["📋 Available Tables:\n"]
+    for table_name, columns in sorted(schema_info.tables.items()):
+        lines.append(f"• {table_name}")
+        if columns:
+            lines.append(f"  Columns: {', '.join(columns[:5])}")
+            if len(columns) > 5:
+                lines.append(f"  ... and {len(columns) - 5} more")
+        else:
+            lines.append("  (no accessible columns)")
+        lines.append("")
+    await update.message.reply_text("\n".join(lines))
+
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not user or not update.message:
@@ -357,6 +389,7 @@ async def initialize_services(app: Application) -> None:
             BotCommand("start", "Start the bot"),
             BotCommand("help", "Show help and available commands"),
             BotCommand("inspire", "Get sample questions from database schema"),
+            BotCommand("schema", "Show available tables (admin only, debug)"),
             BotCommand("adduser", "Add user (admin only)"),
             BotCommand("remuser", "Remove user (admin only)"),
             BotCommand("listuser", "List all users (admin only)"),
@@ -376,6 +409,7 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("inspire", inspire))
+    application.add_handler(CommandHandler("schema", show_schema))
     application.add_handler(CommandHandler("adduser", add_user))
     application.add_handler(CommandHandler("remuser", remove_user))
     application.add_handler(CommandHandler("listuser", list_users))

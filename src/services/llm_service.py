@@ -75,7 +75,11 @@ class LlmService:
             "## SQL Rules",
             "1. Read-only only: NO INSERT/UPDATE/DELETE/DDL operations",
             "2. Never use SELECT * with excluded columns",
-            "3. Respect case sensitivity for table and column names",
+            (
+                "3. CRITICAL: Use exact table/column names from schema. "
+                "PostgreSQL is case-sensitive - if schema shows lowercase, use lowercase. "
+                "Never capitalize or modify table names."
+            ),
             "4. ALWAYS add LIMIT clause to prevent huge result sets",
             ("5. If user asks for 'all records' or 'list all', use LIMIT 100 (maximum allowed)"),
             (
@@ -96,6 +100,16 @@ class LlmService:
                 "11. If a table has a deleted_at, created_at, updated_at "
                 "or similar timestamp column, assume it's for soft-deletes "
                 "and exclude null values"
+            ),
+            "",
+            "## IMPORTANT: Table Name Matching",
+            (
+                "Copy table and column names EXACTLY as shown in the Available Schema section below. "
+                "Do not change capitalization, add prefixes, or modify names in any way."
+            ),
+            (
+                "Example: If schema shows 'trade_invoice', write 'SELECT * FROM trade_invoice', "
+                "NOT 'Trade_invoice' or 'TradeInvoice'"
             ),
             "",
             "## Database Info",
